@@ -1,0 +1,23 @@
+{
+  "name": "analogdev",
+  "version": "1.0.0",
+  "description": "Test program for Chris",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bob44240/AnalogDevices.git"
+  },
+  "author": "R Frieden",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bob44240/AnalogDevices/issues"
+  },
+  "homepage": "https://github.com/bob44240/AnalogDevices#readme",
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "validator": "^13.5.2"
+  }
+}
