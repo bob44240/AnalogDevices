@@ -6,7 +6,7 @@ Quick start
     npm i
 
 To launch: 
-    node httpServer
+    node httpServer setup
 
 Examples: 
 
