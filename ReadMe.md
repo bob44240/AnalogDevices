@@ -1,5 +1,22 @@
 #AnalogDevices
 
+Quick start
+
+    git clone repo
+    npm i
+
+To launch: 
+    node httpServer
+
+Examples: 
+
+See help
+    node httpServer --help
+
+Config to use 35 messages
+    node httpServer.js setup --messages=35
+
+===============Below Specs From Chris==================
 This is some sample code produced for Chris.Ampenberger@analog.com  
 
 He provided the following instructions
