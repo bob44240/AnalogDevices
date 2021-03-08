@@ -70,6 +70,12 @@ function initialize() {
   successCount = 0;
   failureCount = 0;
 }
+function updateParams(msgCount, mSecs, fail,senders){
+  messageCount = msgCount; 
+  meanSeconds = mSecs;
+  failureRate = fail;
+  senderCount = senders;
+}
 function setUp() {
     //Create senders /child processes
     for (var i = 0; i < senderCount; i++) {
@@ -180,7 +186,7 @@ yargs.command ({
 
     //Setup all the params
       console.log(chalk.green("Message count", arg.messages));
-      this.messageCount = arg.messages;
+      messageCount = arg.messages;
       if (arg.messages<10 || arg.messages>10000) {
         console.log(chalk.red("Invalid message count - Must be between 10 and 10,000"));
         this.abort = true;
@@ -191,28 +197,29 @@ yargs.command ({
         console.log(chalk.red("Invalid failure rate - Must be between 10 and 90"));
         this.abort = true;
       }
-      this.failureRate = arg.fail/100;
+      failureRate = arg.fail/100;
 
       console.log(chalk.green("Sender count", arg.senders));
       if (arg.senders<1 || arg.senders>10) {
         console.log(chalk.red("Invalid sender count - Must be between 1 and 10"));
         this.abort = true;
       }
-      this.senderCount = arg.senders;
+      senderCount = arg.senders;
 
       console.log(chalk.green("Average wait time (seconds)", arg.wait));
       if (arg.wait<1 || arg.wait>10) {
         console.log(chalk.red("Invalid wait time - Must be between 1 and 50 seconds"));
         this.abort = true;
       }
-      this.meanSeconds = arg.wait;
+      meanSeconds = arg.wait;
 
       console.log(chalk.green("Control from browser (Y/N)", arg.control));
-      if (arg.control === 'Y'<1 || arg.control === 'N') {
+      if (arg.control === 'Y' || arg.control === 'N') {
         console.log(chalk.red("Invalid browser control - Must be Y or N"));
         this.abort = true;
       }
 
+      updateParams(messageCount,meanSeconds,failureRate,senderCount )
       if (abort) process.exit();
       if (arg.control === 'N') {
         setUp();
