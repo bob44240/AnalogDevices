@@ -3,7 +3,7 @@ const fs = require('fs');
 const validator = require('validator');
 const chalk = require('chalk');
 const yargs = require('yargs');
-const { parsed } = require('yargs');
+const { parsed, string } = require('yargs');
 
 var meanSeconds = 5;
 var messageCount = 100;
@@ -39,54 +39,58 @@ const http = require('http');
 const { fork } = require('child_process');
 const { send } = require('process');
 const { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } = require('constants');
+const { setupMaster } = require('cluster');
 const port = 8000;
 const host = 'localhost';
 
-function initilize() {
-  meanSeconds = 1000;
+initialize();
+const requestListener = function (req, res) {
+  console.log("listening", req.url);
+  if (abort) return;
+  // Start system
+  if (req.url === '/start') {
+    setupMaster();
+  }
+
+  if (req.url === '/go') { execute(); }
+}
+const server = http.createServer(requestListener);
+server.listen(port, host, () => {
+  console.log(`Server is running on http://${host}:${port}`);
+});
+
+
+function initialize() {
+  meanSeconds = 2;
   messageCount = 100;
-  failureRate = .55;
+  failureRate = .25;
   processId = 0;
   senderCount = 4;
   messagesSent = 0;
   successCount = 0;
   failureCount = 0;
 }
-const requestListener = function (req, res) {
-  console.log("listening", req.url);
-  if (abort) return;
-  // Start system
-  if (req.url === '/start') {
-    console.log('Start command recvd')
-    
-    initilize();
-
-    //Create senders
+function setUp() {
+    //Create senders /child processes
     for (var i = 0; i < senderCount; i++) {
-
-      //Crate child process
       senders[i] = fork(__dirname + '/sender.js');
       console.log("Starting child process ", i)
 
       //Create handlers for messages from sender
       senders[i].on('message', (message) => {
-        //console.log('Message:', message);   
         parts=message.split(':');     
         if (parts[0] === 'RESULT') {
-          //If messageCount>0 send next message else kill process
           var senderId = Number(parts[1])
-          //console.log('Result recvd from sender ', senderId);   
           if (parts[2] ==='OK') {
             successCount++;
           } else {
             failureCount++;
           }
-          
           if (messageCount>0) {
             var msg = getMessage();
             sendMessage(senderId, 'SEND', msg);
           } else {
-            //Kill sender process
+            // If we are out of messages kill process - maybe the whole thing? 
             console.log("Success: ", successCount, " Failures ", failureCount)
             showElapsedTime();
             senders[senderId].kill();
@@ -98,28 +102,19 @@ const requestListener = function (req, res) {
      for (var i = 0; i < senderCount; i++) {
         sendMessage(i, 'FAIL', failureRate);
         sendMessage(i, 'WAIT', meanSeconds);
-        
      }
-  }
+}
 
-  if (req.url === '/go') {
-    //Start senders
-    start = Date.now();
-    for (var i = 0; i < senderCount; i++) {
-      sendMessage(i, 'SEND', getMessage());
-   }
+function execute() {
+  //Start senders
+  start = Date.now();
+  for (var i = 0; i < senderCount; i++) {
+    sendMessage(i, 'SEND', getMessage());
   }
 }
 
-const server = http.createServer(requestListener);
-server.listen(port, host, () => {
-  console.log(`Server is running on http://${host}:${port}`);
-});
-
 function sendMessage(procId, type,message){
   var temp = type + ":" + procId + ":" + message;
-  //console.log("Send message ",procId,type,message)
-  
   senders[procId].send(temp);
 }
 
@@ -137,9 +132,7 @@ function randomString() {
   var length = Math.floor(Math.random() * 100) + 1;
   var chars =  '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var result = '';
-  
   for (var i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
-  //console.log("Rand string ",length, result);
   return result;
 }
 
@@ -148,33 +141,44 @@ yargs.command ({
   command: 'setup',
   describe: 'Configure and start system',
   builder: {
+    //messageCount=100
       messages: {
           describe: 'Number of random messages to generate',
           type: 'number',
-          default: 1000
+          default: 100
       },
+      //meanSeconds=2
       wait: {
           describe: 'Mean wait time in seconds',
           type: 'number',
-          default: 5
+          default: 2
       },
+      //senderCount = 4;
       senders: {
           describe: 'Number of sender child processes',
           type: 'number',
-          default: 5
+          default: 4
       },
+      //failureRate = .55;
       fail: {
           describe: 'Messsage failure rate in percent',
           type: 'number',
-          default: 75
+          default: 25
       },
       port: {
         describe: 'http port',
         type: 'number',
         default: 8000
+    },
+    control: {
+      describe: "Control from browser",
+      type: 'string',
+      default: 'N'
     }
   },
   handler: function(arg) {
+
+    //Setup all the params
       console.log(chalk.green("Message count", arg.messages));
       this.messageCount = arg.messages;
       if (arg.messages<10 || arg.messages>10000) {
@@ -196,7 +200,6 @@ yargs.command ({
       }
       this.senderCount = arg.senders;
 
-
       console.log(chalk.green("Average wait time (seconds)", arg.wait));
       if (arg.wait<1 || arg.wait>10) {
         console.log(chalk.red("Invalid wait time - Must be between 1 and 50 seconds"));
@@ -204,7 +207,17 @@ yargs.command ({
       }
       this.meanSeconds = arg.wait;
 
-  }
-})
+      console.log(chalk.green("Control from browser (Y/N)", arg.control));
+      if (arg.control === 'Y'<1 || arg.control === 'N') {
+        console.log(chalk.red("Invalid browser control - Must be Y or N"));
+        this.abort = true;
+      }
 
+      if (abort) process.exit();
+      if (arg.control === 'N') {
+        setUp();
+        execute()
+      }
+    }
+})
 yargs.parse()
